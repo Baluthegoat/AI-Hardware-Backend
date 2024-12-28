@@ -129,7 +129,7 @@ app.use(morgan('combined')); // Log HTTP requests
 const mockData = {
   gps: { speed: 50, location: { lat: 40.7128, lng: -74.0060 }, direction: 'North' },
   temperature: { internal: 22, external: 15 },
-  battery: { percentage: 80, health: 'Good' },
+  battery: { percentage: 85, health: 'Good' },
   camera: { status: 'Streaming', feed: 'placeholderImageURL' },
   lidar: { points: 'placeholderPointCloudData' },
   accelerometer: { x: 0.5, y: -0.3, z: 0.1 },
