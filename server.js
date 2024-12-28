@@ -114,13 +114,16 @@
 
 const express = require('express');
 const bodyParser = require('body-parser');
-const cors = require('cors'); 
+const cors = require('cors');
+const morgan = require('morgan'); // Logging middleware
 
 const app = express();
-const port = 3001;
+const port = 5000;
 
-app.use(cors()); // middleware to enable CORS for all routes
+// Middleware
+app.use(cors()); // Enable CORS for all routes
 app.use(bodyParser.json());
+app.use(morgan('combined')); // Log HTTP requests
 
 // Mock data for demonstration purposes
 const mockData = {
@@ -129,37 +132,78 @@ const mockData = {
   battery: { percentage: 80, health: 'Good' },
   camera: { status: 'Streaming', feed: 'placeholderImageURL' },
   lidar: { points: 'placeholderPointCloudData' },
-  accelerometer: { x: 0.5, y: -0.3, z: 0.1 }
+  accelerometer: { x: 0.5, y: -0.3, z: 0.1 },
 };
 
 // API Endpoint for GPS data
 app.get('/api/gps', (req, res) => {
-  res.json(mockData.gps);
+  try {
+    res.json(mockData.gps);
+  } catch (error) {
+    console.error('Error fetching GPS data:', error.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
 // API Endpoint for Temperature data
 app.get('/api/temperature', (req, res) => {
-  res.json(mockData.temperature);
+  try {
+    res.json(mockData.temperature);
+  } catch (error) {
+    console.error('Error fetching temperature data:', error.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
 // API Endpoint for Battery status
 app.get('/api/battery', (req, res) => {
-  res.json(mockData.battery);
+  try {
+    res.json(mockData.battery);
+  } catch (error) {
+    console.error('Error fetching battery data:', error.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
 // API Endpoint for Camera feed status
 app.get('/api/camera', (req, res) => {
-  res.json(mockData.camera);
+  try {
+    res.json(mockData.camera);
+  } catch (error) {
+    console.error('Error fetching camera data:', error.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
 // API Endpoint for LiDAR data
 app.get('/api/lidar', (req, res) => {
-  res.json({ points: mockData.lidar.points }); // Placeholder for now
+  try {
+    res.json({ points: mockData.lidar.points }); // Placeholder for now
+  } catch (error) {
+    console.error('Error fetching LiDAR data:', error.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
 // API Endpoint for Accelerometer data
 app.get('/api/accelerometer', (req, res) => {
-  res.json(mockData.accelerometer);
+  try {
+    res.json(mockData.accelerometer);
+  } catch (error) {
+    console.error('Error fetching accelerometer data:', error.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Middleware for handling 404 errors (Invalid Endpoints)
+app.use((req, res, next) => {
+  res.status(404).json({ error: 'Endpoint not found' });
+});
+
+// Middleware for handling other server errors
+app.use((err, req, res, next) => {
+  console.error('Unexpected server error:', err.message);
+  res.status(500).json({ error: 'Something went wrong' });
 });
 
 // Start the server
