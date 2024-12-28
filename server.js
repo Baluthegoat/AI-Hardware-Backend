@@ -1,6 +1,7 @@
 // fileName : server.js 
 // Example using the http module
 const http = require('http');
+const { Z_ERRNO } = require('zlib');
 
 // Create an HTTP server
 const server = http.createServer((req, res) => {
