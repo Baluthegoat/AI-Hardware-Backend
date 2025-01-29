@@ -10,91 +10,62 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL") // Replace with your database connection string
 }
 
 model Vehicle {
-  VehicleID  Int   @id@default(autoincrement())
-  Name       String   @db.VarChar(100)
-  Model       String? @db.VarChar(50)
-  CreatedAt        DateTime @default(now())
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  description String?
+  state       VehicleState[]
+  battery     BatteryEvent[]
+}
 
+model VehicleState {
+  id         Int       @id @default(autoincrement())
+  vehicleId  Int       @map("vehicle_id")
+  speed      Float
+  latitude   Float
+  longitude  Float
+  timestamp  DateTime  @default(now())
+  vehicle    Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+}
 
-  sensorData SensorData[]
-  cameras Camera[]
-  gpsData GPSData[]
-  imuData IMUData[]
-  environmentalData EnvironmentalData[]
-  lidarData LidarData[]
+model Sensor {
+  id          Int          @id @default(autoincrement())
+  type        String
+  description String?
+  status      String       @default("active")
+  data        SensorData[]
 }
 
 model SensorData {
-  SensorDataID  Int   @id@default(autoincrement())
-  VehicleID  Int
-  Timestamp       DateTime @default(now())
-  SensorType          String @db.VarChar(50)
-  SensorValue          Json
+  id         Int       @id @default(autoincrement())
+  sensorId   Int       @map("sensor_id")
+  value      Float
+  timestamp  DateTime  @default(now())
+  sensor     Sensor    @relation(fields: [sensorId], references: [id], onDelete: Cascade)
+}
 
-  vehicle Vehicle @relation(fields: [VehicleID], references:[VehicleID])
-  @@index([VehicleID])
+model BatteryEvent {
+  id         Int       @id @default(autoincrement())
+  vehicleId  Int       @map("vehicle_id")
+  eventType  String    // Examples: "CRITICAL_LOW", "CHARGING_STARTED", "HEALTH_CHANGE"
+  percentage Int
+  timestamp  DateTime  @default(now())
+  vehicle    Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 }
 
 model Camera {
-  CameraID  Int   @id@default(autoincrement())
-  VehicleID  Int
-  Timestamp       DateTime @default(now())
-  FilePath  String  @db.VarChar(255)
-  Metadata  Json?
-
-  vehicle Vehicle @relation(fields: [VehicleID], references:[VehicleID])
-  @@index([VehicleID])
+  id        Int       @id @default(autoincrement())
+  status    String    @default("offline") // Examples: "online", "offline"
+  feedUrl   String?
+  timestamp DateTime  @default(now())
 }
 
-model GPSData {
-  GPSDataID  Int   @id@default(autoincrement())
-  VehicleID  Int
-  Timestamp       DateTime @default(now())
-  Latitude        Float
-  Longitude       Float
-  Altitude        Float?
-
-  vehicle Vehicle @relation(fields: [VehicleID], references:[VehicleID])
-  @@index([VehicleID])
-}
-
-model IMUData {
-  IMUDataID  Int   @id@default(autoincrement())
-  VehicleID  Int
-  Timestamp       DateTime @default(now())
-  AccelerometerX Float?
-  AccelerometerY Float?
-  AccelerometerZ Float?
-  GyroscopeX     Float?
-  GyroscopeY     Float?
-  GyroscopeZ     Float?
-
-  vehicle Vehicle @relation(fields: [VehicleID], references:[VehicleID])
-  @@index([VehicleID])
-}
-
-model EnvironmentalData {
-  EnvironmentalDataID  Int   @id@default(autoincrement())
-  VehicleID  Int
-  Timestamp       DateTime @default(now())
-  Temperature       Float?
-  Humidity          Float?
-
-  vehicle Vehicle @relation(fields: [VehicleID], references:[VehicleID])
-  @@index([VehicleID])
-}
-
-model LidarData {
-  LidarDataID  Int   @id@default(autoincrement())
-  VehicleID  Int
-  Timestamp       DateTime @default(now())
-  LidarPoints  Json
-  MetaData  Json?
-
-  vehicle Vehicle @relation(fields: [VehicleID], references:[VehicleID])
-  @@index([VehicleID])
+model Logs {
+  id        Int       @id @default(autoincrement())
+  level     String    // Examples: "info", "error", "warning"
+  message   String
+  timestamp DateTime  @default(now())
 }

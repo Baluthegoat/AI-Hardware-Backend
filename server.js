@@ -1,55 +1,119 @@
 const express = require('express');
-const WebSocket = require('ws');  // WebSocket library for handling WebSocket connections
-const cors = require('cors');  // cors for handling CORS issues
+const WebSocket = require('ws');
+const cors = require('cors');
+const { PrismaClient } = require('@prisma/client');
 
 const app = express();
 const port = 3001;
+const prisma = new PrismaClient();
 
 app.use(express.json());
-app.use(cors());  // Enable CORS for all routes
+app.use(cors());
 
-// The dummy server's WebSocket address
-const dummyServerUrl = 'ws://127.0.0.1:8765';  // WebSocket server address
-
-// Create a WebSocket client to connect to the dummy server
+const dummyServerUrl = 'ws://127.0.0.1:8765';
 const ws = new WebSocket(dummyServerUrl);
 
-// Array to hold the latest data
 let latestData = {};
 
-// When the WebSocket client connects, set up a listener for incoming messages
 ws.on('open', () => {
   console.log('Connected to the dummy server WebSocket');
 });
 
-// Listen for messages from the dummy server
-ws.on('message', (data) => {
+ws.on('message', async (data) => {
+  console.log('Raw WebSocket Data:', data.toString());
   try {
-    // Parse incoming JSON data
-    const parsedData = JSON.parse(data);
-    latestData = parsedData;  // Store the latest data
-    console.log('Data from dummy server:', parsedData);  // Log the received data
+    const parsedData = JSON.parse(data.toString());
+    console.log('Parsed Data:', parsedData);
+    latestData = parsedData;
+    await saveData(parsedData);
   } catch (error) {
-    console.error('Error parsing data from dummy server:', error.message);
+    console.error('Error parsing WebSocket data:', error.message);
   }
 });
 
-// Endpoint for frontend to fetch the latest data from the dummy server
+async function saveData(parsedData) {
+  try {
+    let vehicle = await prisma.vehicle.findFirst({
+      where: { name: "Autonomous Vehicle" },
+    });
+
+    if (!vehicle) {
+      vehicle = await prisma.vehicle.create({
+        data: { name: "Autonomous Vehicle", description: "Test vehicle" },
+      });
+    }
+
+    console.log('Vehicle ID:', vehicle.id);
+
+    const vehicleState = await prisma.vehicleState.create({
+      data: {
+        vehicleId: vehicle.id,
+        speed: parsedData.speed || 0,
+        latitude: parsedData.gps?.latitude || 0,
+        longitude: parsedData.gps?.longitude || 0,
+      },
+    });
+
+    console.log('Saved Vehicle State:', vehicleState);
+
+    if (parsedData.sensor) {
+      let sensor = await prisma.sensor.findFirst({
+        where: { type: parsedData.sensor.type },
+      });
+
+      if (!sensor) {
+        sensor = await prisma.sensor.create({
+          data: {
+            type: parsedData.sensor.type,
+            description: parsedData.sensor.description || "No description",
+          },
+        });
+      }
+
+      console.log('Sensor ID:', sensor.id);
+
+      const sensorData = await prisma.sensorData.create({
+        data: {
+          sensorId: sensor.id,
+          value: parsedData.sensor.value || 0,
+        },
+      });
+
+      console.log('Saved Sensor Data:', sensorData);
+    }
+
+    if (parsedData.battery_level !== undefined) {
+      const batteryEvent = await prisma.batteryEvent.create({
+        data: {
+          vehicleId: vehicle.id,
+          eventType: "BATTERY_UPDATE",
+          percentage: parsedData.battery_level || 0,
+        },
+      });
+
+      console.log('Saved Battery Event:', batteryEvent);
+    }
+
+    console.log('Data saved successfully');
+  } catch (error) {
+    console.error('Error saving data:', error.message);
+  }
+}
+
 app.get('/api/data', (req, res) => {
   if (Object.keys(latestData).length === 0) {
     return res.status(500).json({ error: 'No data received from the dummy server yet' });
   }
 
-  // Sending the latest data to the frontend
   res.json({
-    temperature: latestData.temperature || "Unknown",  // Provide default value if not available
-    speed: latestData.speed || "Unknown",  // Provide default value if not available
-    gps: latestData.gps || { latitude: 0, longitude: 0 },  // Default coordinates if not available
+    temperature: latestData.temperature || "Unknown",
+    speed: latestData.speed || "Unknown",
+    gps: latestData.gps || { latitude: 0, longitude: 0 },
     battery: {
-      percentage: latestData.battery_level || "Unknown",  // Update to match the backend key
-      health: "Good" // Static health or you can modify based on the data
+      percentage: latestData.battery_level || "Unknown",
+      health: "Good",
     },
-    camera: latestData.video_frame || "No video available"  // Return base64-encoded video frame if available
+    camera: latestData.video_frame || "No video available",
   });
 });
 
